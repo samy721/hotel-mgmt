@@ -9,6 +9,7 @@ import roomRoutes from './routes/rooms.js';
 import reservationRoutes from './routes/reservations.js';
 import userRoutes from './routes/users.js';
 import dashboardRoutes from './routes/dashboard.js'; // Naya import
+import pingRoutes from './routes/ping.js';
 
 dotenv.config();
 
@@ -29,6 +30,7 @@ app.use('/api/rooms', roomRoutes);
 app.use('/api/reservations', reservationRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/dashboard', dashboardRoutes); // Naya route
+app.use('/ping', pingRoutes);
 
 /* ---------- SPA catch-all (MUST be last) ---------- */
 app.get(/.*/, (_req, res) => {
