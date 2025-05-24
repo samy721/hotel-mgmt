@@ -1,12 +1,13 @@
-// client/src/pages/Dashboard.jsx (Existing file - updated)
+// client/src/pages/Dashboard.jsx
 import { useContext, useEffect, useState } from 'react';
 import { AuthContext } from '../context/AuthContext';
-import { BarChart, BedDouble, CalendarCheck, Users, ListChecks, AlertTriangle } from 'lucide-react';
+import { BarChart, BedDouble, CalendarCheck, Users, ListChecks, AlertTriangle, UserCheck } from 'lucide-react'; // UserCheck icon add kiya
 
 // Default structure for stats, values will be updated from API
 const initialDashboardStats = [
   { key: 'totalRooms', name: 'Total Rooms', value: '0', icon: <BedDouble className="text-blue-500" size={24} />, color: 'blue' },
   { key: 'activeReservations', name: 'Active Reservations', value: '0', icon: <CalendarCheck className="text-green-500" size={24} />, color: 'green' },
+  { key: 'currentlyCheckedInGuests', name: 'Checked-In Guests', value: '0', icon: <UserCheck className="text-cyan-500" size={24} />, color: 'cyan' }, // Naya card
   { key: 'staffMembers', name: 'Staff Members', value: '0', icon: <Users className="text-yellow-500" size={24} />, color: 'yellow' },
   { key: 'occupancyRate', name: 'Occupancy Rate', value: '0%', icon: <BarChart className="text-purple-500" size={24} />, color: 'purple' },
 ];
@@ -20,7 +21,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const token = localStorage.getItem('token'); // Auth token fetch karein
+  const token = localStorage.getItem('token'); 
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -29,7 +30,7 @@ export default function Dashboard() {
       try {
         const res = await fetch('/api/dashboard/stats', {
           headers: {
-            'Authorization': `Bearer ${token}` // Token include karein
+            'Authorization': `Bearer ${token}` 
           }
         });
         if (!res.ok) {
@@ -38,7 +39,6 @@ export default function Dashboard() {
         }
         const data = await res.json();
         
-        // API se mile data ke saath stats ko update karein
         const updatedStats = initialDashboardStats.map(stat => {
           if (Object.prototype.hasOwnProperty.call(data, stat.key)) {
             return { ...stat, value: stat.key === 'occupancyRate' ? `${data[stat.key]}%` : data[stat.key].toString() };
@@ -53,20 +53,19 @@ export default function Dashboard() {
 
       } catch (err) {
         setError(err.message);
-        // Error hone par default stats rakhein
         setDashboardData({ stats: initialDashboardStats, recentActivities: [] });
       } finally {
         setLoading(false);
       }
     };
 
-    if (token) { // Token hone par hi fetch karein
+    if (token) { 
         fetchDashboardData();
     } else {
         setError("Authentication token not found. Please log in again.");
         setLoading(false);
     }
-  }, [token]); // Token change hone par re-fetch karein
+  }, [token]); 
 
   if (loading) {
     return (
@@ -93,7 +92,7 @@ export default function Dashboard() {
         </div>
       )}
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6"> {/* Updated grid for 5 cards */}
         {dashboardData.stats.map((stat) => (
           <div key={stat.name} className={`bg-white p-6 rounded-xl shadow-lg border-l-4 border-${stat.color}-500`}>
             <div className="flex items-center justify-between">
@@ -134,7 +133,6 @@ export default function Dashboard() {
           <h2 className="text-xl font-semibold text-gray-700 mb-4">Quick Links</h2>
           <div className="space-y-2">
              <p className="text-gray-600">Welcome, {user?.username}! Use the sidebar to navigate.</p>
-             {/* Aap yahan aur bhi relevant quick links add kar sakte hain */}
           </div>
         </div>
       </div>

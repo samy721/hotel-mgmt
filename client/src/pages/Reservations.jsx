@@ -1,6 +1,7 @@
 // client/src/pages/Reservations.jsx
 import { useEffect, useState } from 'react';
-import { PlusCircle, CalendarDays, User, Phone, DollarSign, XCircle, Sparkles } from 'lucide-react';
+import { PlusCircle, CalendarDays, User, Phone, DollarSign, XCircle, LogIn, LogOut, AlertTriangle } from 'lucide-react';
+import Modal from '../components/Modal'; 
 
 export default function Reservations() {
   const token = localStorage.getItem('token');
@@ -15,16 +16,28 @@ export default function Reservations() {
   const [loading, setLoading] = useState(true);
   const [loadingRooms, setLoadingRooms] = useState(true);
 
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState(null); 
+  const [modalContent, setModalContent] = useState({ title: '', message: ''});
+
+
   useEffect(() => {
-    loadReservations();
-    loadAvailableRooms();
+    loadData(); // Initial data load
   }, []);
+
+  async function loadData() {
+    await loadReservations();
+    await loadAvailableRooms();
+  }
 
   async function loadReservations() {
     setLoading(true);
     try {
       const res = await fetch('/api/reservations', { headers });
-      if(!res.ok) throw new Error('Failed to load reservations');
+      if(!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || 'Failed to load reservations');
+      }
       const data = await res.json();
       setReservations(data);
     } catch (error) {
@@ -38,7 +51,10 @@ export default function Reservations() {
     setLoadingRooms(true);
     try {
       const res = await fetch('/api/rooms', { headers });
-      if(!res.ok) throw new Error('Failed to load rooms');
+      if(!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || 'Failed to load rooms');
+      }
       const data = await res.json();
       setRooms(data.filter(r => r.status === 'Available'));
     } catch (error) {
@@ -75,28 +91,57 @@ export default function Reservations() {
         throw new Error(errData.message || 'Failed to create reservation');
       }
       setMsg({ type: 'success', text: 'Reservation created successfully!' });
-      loadReservations(); 
-      loadAvailableRooms(); 
+      loadData(); 
       setForm({ roomId: '', guestName: '', guestPhone: '', checkIn: '', checkOut: '' });
     } catch (error) {
       setMsg({ type: 'error', text: error.message });
     }
   };
 
-  const handleCancelReservation = async (id) => {
-    if (!window.confirm('Are you sure you want to cancel this reservation?')) return;
+  const openConfirmationModal = (actionType, reservationId, guestName, roomNumber) => {
+    let title = '';
+    let message = '';
+    switch(actionType) {
+        case 'cancel':
+            title = 'Confirm Cancellation';
+            message = `Are you sure you want to cancel the reservation for ${guestName} (Room ${roomNumber || 'N/A'})?`;
+            break;
+        case 'checkin':
+            title = 'Confirm Check-In';
+            message = `Are you sure you want to check-in ${guestName} for Room ${roomNumber || 'N/A'}?`;
+            break;
+        case 'checkout':
+            title = 'Confirm Check-Out';
+            message = `Are you sure you want to check-out ${guestName} from Room ${roomNumber || 'N/A'}?`;
+            break;
+        default:
+            return;
+    }
+    setModalContent({ title, message });
+    setConfirmAction({ action: actionType, id: reservationId});
+    setIsConfirmModalOpen(true);
+  };
+
+  const handleConfirmAction = async () => {
+    if (!confirmAction) return;
+    
+    const {action, id} = confirmAction;
+    let apiUrl = `/api/reservations/${id}/${action}`;
     setMsg({ type: '', text: '' });
+
     try {
-      const res = await fetch(`/api/reservations/${id}/cancel`, { method: 'PUT', headers });
+      const res = await fetch(apiUrl, { method: 'PUT', headers });
        if (!res.ok) {
         const errData = await res.json();
-        throw new Error(errData.message || 'Failed to cancel reservation');
+        throw new Error(errData.message || `Failed to ${action} reservation`);
       }
-      setMsg({ type: 'success', text: 'Reservation cancelled successfully!' });
-      loadReservations(); 
-      loadAvailableRooms(); 
+      setMsg({ type: 'success', text: `Reservation ${action} successful!` });
+      loadData();
     } catch (error) {
       setMsg({ type: 'error', text: error.message });
+    } finally {
+        setIsConfirmModalOpen(false);
+        setConfirmAction(null);
     }
   };
   
@@ -104,6 +149,7 @@ export default function Reservations() {
     switch (status) {
       case 'Reserved': return 'bg-blue-100 text-blue-700';
       case 'Checked-In': return 'bg-green-100 text-green-700';
+      case 'Checked-Out': return 'bg-orange-100 text-orange-700'; 
       case 'Cancelled': return 'bg-red-100 text-red-700';
       default: return 'bg-gray-100 text-gray-700';
     }
@@ -114,7 +160,7 @@ export default function Reservations() {
       <h1 className="text-3xl font-bold text-gray-800">Reservations Management</h1>
 
       {msg.text && (
-        <div className={`p-4 rounded-md text-sm ${msg.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`} role="alert">
+        <div className={`p-3 rounded-md text-sm my-3 ${msg.type === 'success' ? 'bg-green-100 text-green-700 border border-green-300' : 'bg-red-100 text-red-700 border border-red-300'}`} role="alert">
           {msg.text}
         </div>
       )}
@@ -171,7 +217,7 @@ export default function Reservations() {
         <p className="text-center text-gray-500">Loading reservations...</p>
       ) : reservations.length === 0 ? (
         <div className="text-center py-10 bg-white rounded-xl shadow-lg">
-            <CalendarCheck size={48} className="mx-auto text-gray-400 mb-4" />
+            <CalendarDays size={48} className="mx-auto text-gray-400 mb-4" />
             <p className="text-gray-500 text-lg">No reservations found.</p>
             <p className="text-sm text-gray-400 mt-2">Use the form above to create a new reservation.</p>
         </div>
@@ -180,38 +226,61 @@ export default function Reservations() {
           <table className="w-full min-w-max text-sm text-left text-gray-700">
             <thead className="text-xs text-gray-700 uppercase bg-gray-100">
               <tr>
-                <th scope="col" className="px-6 py-3">Room</th>
-                <th scope="col" className="px-6 py-3"><User size={16} className="inline mr-1" /> Guest</th>
-                <th scope="col" className="px-6 py-3"><Phone size={16} className="inline mr-1" /> Phone</th>
-                <th scope="col" className="px-6 py-3"><CalendarDays size={16} className="inline mr-1" /> Check-In</th>
-                <th scope="col" className="px-6 py-3"><CalendarDays size={16} className="inline mr-1" /> Check-Out</th>
-                <th scope="col" className="px-6 py-3">Status</th>
-                <th scope="col" className="px-6 py-3"><DollarSign size={16} className="inline mr-1" /> Total</th>
-                <th scope="col" className="px-6 py-3 text-center" colSpan={2}>Actions</th> {/* Colspan updated */}
+                <th scope="col" className="px-4 py-3">Room</th>
+                <th scope="col" className="px-4 py-3">Guest</th>
+                <th scope="col" className="px-4 py-3">Phone</th>
+                <th scope="col" className="px-4 py-3">Check-In</th>
+                <th scope="col" className="px-4 py-3">Check-Out</th>
+                <th scope="col" className="px-4 py-3">Actual Check-In</th>
+                <th scope="col" className="px-4 py-3">Actual Check-Out</th>
+                <th scope="col" className="px-4 py-3">Status</th>
+                <th scope="col" className="px-4 py-3">Total</th>
+                <th scope="col" className="px-4 py-3 text-center">Actions</th>
               </tr>
             </thead>
             <tbody>
               {reservations.map(r => (
                 <tr key={r._id} className="bg-white border-b hover:bg-gray-50">
-                  <td className="px-6 py-4 font-medium text-gray-900">{r.roomId?.number || 'N/A'}</td>
-                  <td className="px-6 py-4">{r.guestName}</td>
-                  <td className="px-6 py-4">{r.guestPhone || '-'}</td>
-                  <td className="px-6 py-4">{new Date(r.checkIn).toLocaleDateString()}</td>
-                  <td className="px-6 py-4">{new Date(r.checkOut).toLocaleDateString()}</td>
-                  <td className="px-6 py-4">
+                  <td className="px-4 py-2 font-medium text-gray-900">{r.roomId?.number || 'N/A'}</td>
+                  <td className="px-4 py-2">{r.guestName}</td>
+                  <td className="px-4 py-2">{r.guestPhone || '-'}</td>
+                  <td className="px-4 py-2">{new Date(r.checkIn).toLocaleDateString()}</td>
+                  <td className="px-4 py-2">{new Date(r.checkOut).toLocaleDateString()}</td>
+                  <td className="px-4 py-2">{r.actualCheckIn ? new Date(r.actualCheckIn).toLocaleString() : '-'}</td>
+                  <td className="px-4 py-2">{r.actualCheckOut ? new Date(r.actualCheckOut).toLocaleString() : '-'}</td>
+                  <td className="px-4 py-2">
                     <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(r.status)}`}>
                       {r.status}
                     </span>
                   </td>
-                  <td className="px-6 py-4">${Number(r.totalAmount).toFixed(2)}</td>
-                  <td className="px-6 py-4 text-center">
-                    {r.status !== 'Cancelled' && (
-                      <button onClick={() => handleCancelReservation(r._id)}
-                        className="flex items-center mx-auto text-red-600 hover:text-red-800 p-1 rounded-full hover:bg-red-100 transition-colors text-xs"
-                      >
-                        <XCircle size={16} className="mr-1"/> Cancel
-                      </button>
-                    )}
+                  <td className="px-4 py-2">${Number(r.totalAmount).toFixed(2)}</td>
+                  <td className="px-4 py-2 text-center">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-center gap-1"> {/* Updated for better layout */}
+                        {r.status === 'Reserved' && (
+                        <button 
+                            onClick={() => openConfirmationModal('checkin', r._id, r.guestName, r.roomId?.number)}
+                            className="flex items-center justify-center w-full sm:w-auto text-xs bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded-md transition-colors"
+                        >
+                            <LogIn size={14} className="mr-1"/> Check-In
+                        </button>
+                        )}
+                        {r.status === 'Checked-In' && (
+                        <button 
+                            onClick={() => openConfirmationModal('checkout', r._id, r.guestName, r.roomId?.number)}
+                            className="flex items-center justify-center w-full sm:w-auto text-xs bg-orange-500 hover:bg-orange-600 text-white px-2 py-1 rounded-md transition-colors"
+                        >
+                            <LogOut size={14} className="mr-1"/> Check-Out
+                        </button>
+                        )}
+                        {(r.status === 'Reserved' || r.status === 'Checked-In') && (
+                        <button 
+                            onClick={() => openConfirmationModal('cancel', r._id, r.guestName, r.roomId?.number)}
+                            className="flex items-center justify-center w-full sm:w-auto text-xs bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded-md transition-colors"
+                        >
+                            <XCircle size={14} className="mr-1"/> Cancel
+                        </button>
+                        )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -219,6 +288,20 @@ export default function Reservations() {
           </table>
         </div>
       )}
+      <Modal
+        isOpen={isConfirmModalOpen}
+        onClose={() => setIsConfirmModalOpen(false)}
+        onConfirm={handleConfirmAction}
+        title={modalContent.title}
+      >
+        <div className="flex items-start space-x-3">
+            <AlertTriangle size={48} className="text-yellow-500 flex-shrink-0" />
+            <div>
+                <p className="font-medium">{modalContent.message}</p>
+                <p className="text-sm text-gray-600 mt-1">This action will update the reservation and room status.</p>
+            </div>
+        </div>
+      </Modal>
     </div>
   );
 }

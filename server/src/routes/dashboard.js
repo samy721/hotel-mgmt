@@ -1,4 +1,4 @@
-// server/src/routes/dashboard.js (Nayi file)
+// server/src/routes/dashboard.js
 import { Router } from 'express';
 import Room from '../models/Room.js';
 import Reservation from '../models/Reservation.js';
@@ -18,25 +18,24 @@ router.get('/stats', async (req, res) => {
       status: { $in: ['Reserved', 'Checked-In'] } 
     });
     const staffMembers = await User.countDocuments({ role: 'STAFF' });
+    const currentlyCheckedInGuests = await Reservation.countDocuments({ status: 'Checked-In' }); // Naya statistic
 
     let occupancyRate = 0;
     if (totalRooms > 0) {
       occupancyRate = parseFloat(((occupiedRooms / totalRooms) * 100).toFixed(1));
     }
 
-    // Recent activity ke liye, hum latest 3 reservations fetch karenge
-    // Ek behtar approach ek dedicated activity log collection banana hoga
     const recentActivityDocs = await Reservation.find()
-      .sort({ createdAt: -1 }) // createdAt field par sort karein (agar aapke schema mein hai) ya _id (default sort by insertion time)
+      .sort({ createdAt: -1 }) 
       .limit(3)
-      .populate('roomId', 'number type'); // Room details populate karein
+      .populate('roomId', 'number type'); 
 
     const recentActivities = recentActivityDocs.map(act => {
       let message = `New reservation by ${act.guestName}`;
       if (act.roomId) {
         message += ` for Room ${act.roomId.number} (${act.roomId.type})`;
       }
-      message += ` on ${new Date(act.createdAt).toLocaleDateString()}.`; // createdAt timestamp ka istemal
+      message += ` on ${new Date(act.createdAt).toLocaleDateString()}.`; 
       return {
         id: act._id,
         message: message,
@@ -50,7 +49,8 @@ router.get('/stats', async (req, res) => {
       activeReservations,
       staffMembers,
       occupancyRate,
-      recentActivities // Formatted recent activities
+      currentlyCheckedInGuests, // Response mein add kiya gaya
+      recentActivities 
     });
 
   } catch (error) {
@@ -60,4 +60,3 @@ router.get('/stats', async (req, res) => {
 });
 
 export default router;
- 

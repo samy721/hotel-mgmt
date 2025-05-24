@@ -109,14 +109,6 @@ export default function Rooms() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold text-gray-800">Room Management</h1>
-        {user.role === 'ADMIN' && (
-          <button
-            onClick={() => { setEditingRoom(null); setForm({ number: '', type: '', pricePerNight: '' }); }}
-            className="flex items-center bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md transition duration-150"
-          >
-            <PlusCircle size={20} className="mr-2" /> Add New Room
-          </button>
-        )}
       </div>
 
       {msg.text && (
