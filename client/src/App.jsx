@@ -1,3 +1,4 @@
+// client/src/App.jsx
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useContext } from 'react';
 import { AuthContext } from './context/AuthContext';
@@ -6,23 +7,36 @@ import Dashboard from './pages/Dashboard';
 import Rooms from './pages/Rooms';
 import Reservations from './pages/Reservations';
 import StaffMgr from './pages/StaffMgr';
+import Layout from './components/Layout'; 
 
 export default function App() {
   const { user } = useContext(AuthContext);
 
-  const Private = ({ children }) =>
-    user ? children : <Navigate to="/login" replace />;
+  const PrivateRoute = ({ children }) => {
+    if (!user) {
+      return <Navigate to="/login" replace />;
+    }
+    return <Layout>{children}</Layout>;
+  };
 
-  const AdminOnly = ({ children }) =>
-    user && user.role === 'ADMIN' ? children : <Navigate to="/" replace />;
+  const AdminOnlyRoute = ({ children }) => {
+    if (!user) {
+      return <Navigate to="/login" replace />;
+    }
+    if (user.role !== 'ADMIN') {
+      return <Navigate to="/" replace />;
+    }
+    return <Layout>{children}</Layout>;
+  };
 
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
-      <Route path="/" element={<Private><Dashboard /></Private>} />
-      <Route path="/rooms" element={<Private><Rooms /></Private>} />
-      <Route path="/reservations" element={<Private><Reservations /></Private>} />
-      <Route path="/staff" element={<AdminOnly><StaffMgr /></AdminOnly>} />
+      <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+      <Route path="/rooms" element={<PrivateRoute><Rooms /></PrivateRoute>} />
+      <Route path="/reservations" element={<PrivateRoute><Reservations /></PrivateRoute>} />
+      <Route path="/staff" element={<AdminOnlyRoute><StaffMgr /></AdminOnlyRoute>} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }

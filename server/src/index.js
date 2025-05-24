@@ -8,11 +8,12 @@ import authRoutes from './routes/auth.js';
 import roomRoutes from './routes/rooms.js';
 import reservationRoutes from './routes/reservations.js';
 import userRoutes from './routes/users.js';
+import dashboardRoutes from './routes/dashboard.js'; // Naya import
 
 dotenv.config();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-console.log(__dirname)
+// console.log(__dirname) // Commented out as it's not essential for this change
 const app = express();
 
 /* ---------- middleware ---------- */
@@ -27,6 +28,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/rooms', roomRoutes);
 app.use('/api/reservations', reservationRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/dashboard', dashboardRoutes); // Naya route
 
 /* ---------- SPA catch-all (MUST be last) ---------- */
 app.get(/.*/, (_req, res) => {
@@ -34,8 +36,11 @@ app.get(/.*/, (_req, res) => {
 });
 
 /* ---------- start server ---------- */
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5000; // Default port 5000 agar env mein define nahi hai
 mongoose
   .connect(process.env.MONGO_URI)
-  .then(() => app.listen(PORT, () => console.log(`Server running on :${PORT}`)))
-  .catch(console.error);
+  .then(() => app.listen(PORT, () => console.log(`Server chal raha hai port: ${PORT} par`)))
+  .catch(error => { // Error ko log karein
+    console.error('Database connection error:', error);
+    process.exit(1); // Connection fail hone par exit karein
+  });
