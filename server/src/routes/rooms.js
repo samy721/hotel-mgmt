@@ -3,7 +3,6 @@ import Room from '../models/Room.js';
 import { verifyToken, requireRole } from '../middlewares/auth.js';
 
 const router = Router();
-
 router.use(verifyToken);
 
 router.get('/', async (req, res) => {

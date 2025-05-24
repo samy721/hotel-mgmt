@@ -9,9 +9,8 @@ export default function Login() {
   const navigate = useNavigate();
   const [error, setError] = useState(null);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async e => {
     e.preventDefault();
-    setError(null);
     try {
       await login(username, password);
       navigate('/');
@@ -29,14 +28,14 @@ export default function Login() {
           className="border w-full mb-3 p-2"
           placeholder="Username"
           value={username}
-          onChange={(e) => setUsername(e.target.value)}
+          onChange={e => setUsername(e.target.value)}
         />
         <input
           className="border w-full mb-3 p-2"
           type="password"
           placeholder="Password"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={e => setPassword(e.target.value)}
         />
         <button className="bg-blue-600 text-white w-full py-2">Login</button>
       </form>
