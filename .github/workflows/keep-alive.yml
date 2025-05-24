@@ -1,0 +1,12 @@
+name: Keep Render Awake
+on:
+  schedule:
+    - cron:  '*/5 * * * *'    # every 5 min (UTC)
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Curl ping endpoint
+        run: curl -fsSL https://hotel-mgmt-rxac.onrender.com/ping || true
